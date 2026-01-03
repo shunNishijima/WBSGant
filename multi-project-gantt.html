@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi Project Gantt</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-light: #dbeafe;
+            --success: #22c55e;
+            --success-light: #dcfce7;
+            --warning: #f59e0b;
+            --warning-light: #fef3c7;
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
+            --purple: #8b5cf6;
+            --pink: #ec4899;
+            --teal: #14b8a6;
+            --indigo: #6366f1;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --card: #1e293b;
+                --border: #334155;
+                --border-light: #1e293b;
+                --text: #f1f5f9;
+                --text-secondary: #94a3b8;
+                --text-muted: #64748b;
+                --accent-light: #1e3a5f;
+                --success-light: #14532d;
+                --warning-light: #451a03;
+                --danger-light: #450a0a;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .app-header {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .app-title {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .header-btn {
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .header-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .header-btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Summary Cards */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .summary-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .summary-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .summary-value.danger { color: var(--danger); }
+        .summary-value.warning { color: var(--warning); }
+        .summary-value.success { color: var(--success); }
+
+        /* Timeline Header */
+        .timeline-container {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .timeline-header {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            position: sticky;
+            top: 57px;
+            background: var(--card);
+            z-index: 50;
+        }
+
+        .timeline-label-col {
+            min-width: 280px;
+            max-width: 280px;
+            padding: 10px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            position: sticky;
+            left: 0;
+            z-index: 10;
+        }
+
+        .timeline-dates {
+            display: flex;
+            flex: 1;
+        }
+
+        .timeline-day {
+            min-width: 32px;
+            padding: 6px 2px;
+            text-align: center;
+            border-right: 1px solid var(--border-light);
+            flex-shrink: 0;
+        }
+
+        .timeline-day.weekend {
+            background: var(--bg);
+        }
+
+        .timeline-day.today {
+            background: var(--accent-light);
+        }
+
+        .timeline-weekday {
+            font-size: 9px;
+            color: var(--text-muted);
+        }
+
+        .timeline-date {
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* Project Section */
+        .projects-container {
+            /* For drag and drop */
+        }
+
+        .project-section {
+            border-bottom: 2px solid var(--border);
+            cursor: grab;
+            transition: all 0.2s;
+        }
+
+        .project-section:last-child {
+            border-bottom: none;
+        }
+
+        .project-section.dragging {
+            opacity: 0.5;
+            background: var(--accent-light);
+        }
+
+        .project-section.drag-over {
+            border-top: 3px solid var(--accent);
+        }
+
+        .project-header {
+            display: flex;
+            align-items: center;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .project-label {
+            min-width: 280px;
+            max-width: 280px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-right: 1px solid var(--border);
+            position: sticky;
+            left: 0;
+            background: var(--bg);
+            z-index: 10;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            color: var(--text-muted);
+            padding: 4px;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .project-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .project-name-input {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            outline: none;
+            min-width: 0;
+        }
+
+        .project-progress {
+            font-size: 11px;
+            color: var(--text-muted);
+            background: var(--card);
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .project-menu-btn {
+            padding: 6px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .project-menu-btn:hover {
+            background: var(--card);
+            color: var(--text);
+        }
+
+        .project-gantt-header {
+            flex: 1;
+            height: 44px;
+            position: relative;
+        }
+
+        /* Task Row */
+        .task-row {
+            display: flex;
+            border-bottom: 1px solid var(--border-light);
+            transition: background 0.2s;
+        }
+
+        .task-row:hover {
+            background: var(--border-light);
+        }
+
+        .task-row:last-child {
+            border-bottom: none;
+        }
+
+        .task-label {
+            min-width: 280px;
+            max-width: 280px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-right: 1px solid var(--border);
+            position: sticky;
+            left: 0;
+            background: var(--card);
+            z-index: 5;
+        }
+
+        .task-row:hover .task-label {
+            background: var(--border-light);
+        }
+
+        .task-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .task-checkbox:hover {
+            border-color: var(--success);
+        }
+
+        .task-checkbox.checked {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .task-checkbox svg {
+            width: 12px;
+            height: 12px;
+            stroke: white;
+            stroke-width: 3;
+            opacity: 0;
+        }
+
+        .task-checkbox.checked svg {
+            opacity: 1;
+        }
+
+        .task-info {
+            flex: 1;
+            min-width: 0;
+            cursor: pointer;
+        }
+
+        .task-name {
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .task-row.completed .task-name {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .task-dates {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .task-status {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .task-status.overdue {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .task-status.due-soon {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+
+        .task-status.on-track {
+            background: var(--success-light);
+            color: var(--success);
+        }
+
+        .task-gantt {
+            flex: 1;
+            position: relative;
+            display: flex;
+        }
+
+        .gantt-cell {
+            min-width: 32px;
+            border-right: 1px solid var(--border-light);
+            flex-shrink: 0;
+        }
+
+        .gantt-cell.weekend {
+            background: rgba(0,0,0,0.02);
+        }
+
+        .gantt-cell.today {
+            background: var(--accent-light);
+        }
+
+        /* Gantt Bar */
+        .gantt-bar {
+            position: absolute;
+            height: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding: 0 6px;
+            font-size: 10px;
+            color: white;
+            cursor: pointer;
+            z-index: 5;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .gantt-bar.completed {
+            opacity: 0.5;
+        }
+
+        .gantt-bar:hover {
+            filter: brightness(1.1);
+        }
+
+        /* Add Task Row */
+        .add-task-row {
+            display: flex;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .add-task-label {
+            min-width: 280px;
+            max-width: 280px;
+            padding: 8px 16px;
+            border-right: 1px solid var(--border);
+            position: sticky;
+            left: 0;
+            background: var(--card);
+        }
+
+        .add-task-btn {
+            width: 100%;
+            padding: 8px;
+            font-size: 12px;
+            font-family: inherit;
+            background: none;
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .add-task-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .add-task-gantt {
+            flex: 1;
+        }
+
+        /* Today Line */
+        .today-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--danger);
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        /* Colors */
+        .color-blue { background: var(--accent); }
+        .color-green { background: var(--success); }
+        .color-purple { background: var(--purple); }
+        .color-orange { background: var(--warning); }
+        .color-pink { background: var(--pink); }
+        .color-teal { background: var(--teal); }
+        .color-indigo { background: var(--indigo); }
+        .color-red { background: var(--danger); }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-family: inherit;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .color-option {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 3px solid transparent;
+        }
+
+        .color-option.selected {
+            border-color: var(--text);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .modal-btn.cancel {
+            background: var(--bg);
+            color: var(--text-secondary);
+        }
+
+        .modal-btn.confirm {
+            background: var(--accent);
+            color: white;
+        }
+
+        .modal-btn.danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Empty State */
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-text {
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        /* Priority Badge */
+        .priority-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+
+        .priority-high {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .priority-medium {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content">
+            <h1 class="app-title">📊 Multi Project Gantt</h1>
+            <div class="header-actions">
+                <button class="header-btn" onclick="collapseAll()">全て折りたたむ</button>
+                <button class="header-btn" onclick="expandAll()">全て展開</button>
+                <button class="header-btn primary" onclick="showProjectModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    プロジェクト追加
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Summary -->
+        <div class="summary-cards">
+            <div class="summary-card">
+                <div class="summary-label">プロジェクト数</div>
+                <div class="summary-value" id="totalProjects">0</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">全タスク</div>
+                <div class="summary-value" id="totalTasks">0</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">期限超過</div>
+                <div class="summary-value danger" id="overdueTasks">0</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">今週期限</div>
+                <div class="summary-value warning" id="dueSoonTasks">0</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">完了率</div>
+                <div class="summary-value success" id="completionRate">0%</div>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline-container">
+            <div class="timeline-header">
+                <div class="timeline-label-col">タスク</div>
+                <div class="timeline-dates" id="timelineDates"></div>
+            </div>
+            <div class="projects-container" id="projectsContainer"></div>
+        </div>
+    </div>
+
+    <!-- Project Modal -->
+    <div class="modal-overlay" id="projectModal">
+        <div class="modal">
+            <h3 class="modal-title" id="projectModalTitle">プロジェクトを追加</h3>
+            <div class="form-group">
+                <label class="form-label">プロジェクト名</label>
+                <input type="text" class="form-input" id="projectNameInput" placeholder="例: ウェブサイトリニューアル">
+            </div>
+            <div class="form-group">
+                <label class="form-label">カラー</label>
+                <div class="color-picker" id="projectColorPicker">
+                    <div class="color-option color-blue selected" data-color="blue" onclick="selectProjectColor(this)"></div>
+                    <div class="color-option color-green" data-color="green" onclick="selectProjectColor(this)"></div>
+                    <div class="color-option color-purple" data-color="purple" onclick="selectProjectColor(this)"></div>
+                    <div class="color-option color-orange" data-color="orange" onclick="selectProjectColor(this)"></div>
+                    <div class="color-option color-pink" data-color="pink" onclick="selectProjectColor(this)"></div>
+                    <div class="color-option color-teal" data-color="teal" onclick="selectProjectColor(this)"></div>
+                    <div class="color-option color-indigo" data-color="indigo" onclick="selectProjectColor(this)"></div>
+                    <div class="color-option color-red" data-color="red" onclick="selectProjectColor(this)"></div>
+                </div>
+            </div>
+            <div class="modal-actions" id="projectModalActions">
+                <button class="modal-btn cancel" onclick="hideProjectModal()">キャンセル</button>
+                <button class="modal-btn confirm" onclick="saveProject()">追加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div class="modal-overlay" id="taskModal">
+        <div class="modal">
+            <h3 class="modal-title" id="taskModalTitle">タスクを追加</h3>
+            <div class="form-group">
+                <label class="form-label">タスク名</label>
+                <input type="text" class="form-input" id="taskNameInput" placeholder="例: デザイン作成">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">開始日</label>
+                    <input type="date" class="form-input" id="taskStartInput">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">終了日</label>
+                    <input type="date" class="form-input" id="taskEndInput">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">優先度</label>
+                <select class="form-input" id="taskPriorityInput">
+                    <option value="low">低</option>
+                    <option value="medium">中</option>
+                    <option value="high">高</option>
+                </select>
+            </div>
+            <div class="modal-actions" id="taskModalActions">
+                <button class="modal-btn cancel" onclick="hideTaskModal()">キャンセル</button>
+                <button class="modal-btn confirm" onclick="saveTask()">追加</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'multi_project_gantt';
+        const DAY_WIDTH = 32;
+        const VISIBLE_DAYS = 60;
+        const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+        let data = loadData();
+        let editingProjectId = null;
+        let editingTaskId = null;
+        let currentProjectId = null;
+        let selectedProjectColor = 'blue';
+        let draggedProject = null;
+
+        function loadData() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) return JSON.parse(saved);
+            return { projects: [] };
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function parseDate(str) {
+            return new Date(str + 'T00:00:00');
+        }
+
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function formatDisplayDate(str) {
+            const d = parseDate(str);
+            return `${d.getMonth() + 1}/${d.getDate()}`;
+        }
+
+        function getDaysDiff(start, end) {
+            return Math.ceil((parseDate(end) - parseDate(start)) / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        function getDayOffset(target, base) {
+            return Math.floor((parseDate(target) - parseDate(base)) / (1000 * 60 * 60 * 24));
+        }
+
+        function getDateRange() {
+            const today = new Date();
+            let min = new Date(today);
+            min.setDate(min.getDate() - 7);
+            let max = new Date(today);
+            max.setDate(max.getDate() + VISIBLE_DAYS);
+
+            for (const p of data.projects) {
+                for (const t of p.tasks) {
+                    if (t.startDate) {
+                        const s = parseDate(t.startDate);
+                        if (s < min) min = new Date(s);
+                    }
+                    if (t.endDate) {
+                        const e = parseDate(t.endDate);
+                        if (e > max) max = new Date(e);
+                    }
+                }
+            }
+
+            min.setDate(min.getDate() - 3);
+            max.setDate(max.getDate() + 7);
+            return { min, max };
+        }
+
+        function getTaskStatus(task) {
+            if (task.completed) return 'completed';
+            if (!task.endDate) return 'on-track';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const end = parseDate(task.endDate);
+            const daysLeft = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
+
+            if (daysLeft < 0) return 'overdue';
+            if (daysLeft <= 7) return 'due-soon';
+            return 'on-track';
+        }
+
+        // Project functions
+        function showProjectModal(projectId = null) {
+            editingProjectId = projectId;
+            const title = document.getElementById('projectModalTitle');
+            const actions = document.getElementById('projectModalActions');
+
+            if (projectId) {
+                const project = data.projects.find(p => p.id === projectId);
+                if (project) {
+                    title.textContent = 'プロジェクトを編集';
+                    document.getElementById('projectNameInput').value = project.name;
+                    selectProjectColor(document.querySelector(`[data-color="${project.color}"]`));
+                    actions.innerHTML = `
+                        <button class="modal-btn danger" onclick="deleteProject()">削除</button>
+                        <button class="modal-btn cancel" onclick="hideProjectModal()">キャンセル</button>
+                        <button class="modal-btn confirm" onclick="saveProject()">保存</button>
+                    `;
+                }
+            } else {
+                title.textContent = 'プロジェクトを追加';
+                document.getElementById('projectNameInput').value = '';
+                selectProjectColor(document.querySelector('.color-option'));
+                actions.innerHTML = `
+                    <button class="modal-btn cancel" onclick="hideProjectModal()">キャンセル</button>
+                    <button class="modal-btn confirm" onclick="saveProject()">追加</button>
+                `;
+            }
+
+            document.getElementById('projectModal').classList.add('show');
+        }
+
+        function hideProjectModal() {
+            document.getElementById('projectModal').classList.remove('show');
+            editingProjectId = null;
+        }
+
+        function selectProjectColor(el) {
+            document.querySelectorAll('#projectColorPicker .color-option').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedProjectColor = el.dataset.color;
+        }
+
+        function saveProject() {
+            const name = document.getElementById('projectNameInput').value.trim();
+            if (!name) return;
+
+            if (editingProjectId) {
+                const project = data.projects.find(p => p.id === editingProjectId);
+                if (project) {
+                    project.name = name;
+                    project.color = selectedProjectColor;
+                }
+            } else {
+                data.projects.push({
+                    id: generateId(),
+                    name: name,
+                    color: selectedProjectColor,
+                    collapsed: false,
+                    tasks: []
+                });
+            }
+
+            saveData();
+            render();
+            hideProjectModal();
+        }
+
+        function deleteProject() {
+            if (!confirm('このプロジェクトを削除しますか？')) return;
+            data.projects = data.projects.filter(p => p.id !== editingProjectId);
+            saveData();
+            render();
+            hideProjectModal();
+        }
+
+        function updateProjectName(projectId, name) {
+            const project = data.projects.find(p => p.id === projectId);
+            if (project) {
+                project.name = name;
+                saveData();
+            }
+        }
+
+        function toggleProject(projectId) {
+            const project = data.projects.find(p => p.id === projectId);
+            if (project) {
+                project.collapsed = !project.collapsed;
+                saveData();
+                render();
+            }
+        }
+
+        // Task functions
+        function showTaskModal(projectId, taskId = null) {
+            currentProjectId = projectId;
+            editingTaskId = taskId;
+            const title = document.getElementById('taskModalTitle');
+            const actions = document.getElementById('taskModalActions');
+
+            if (taskId) {
+                const project = data.projects.find(p => p.id === projectId);
+                const task = project?.tasks.find(t => t.id === taskId);
+                if (task) {
+                    title.textContent = 'タスクを編集';
+                    document.getElementById('taskNameInput').value = task.name;
+                    document.getElementById('taskStartInput').value = task.startDate || '';
+                    document.getElementById('taskEndInput').value = task.endDate || '';
+                    document.getElementById('taskPriorityInput').value = task.priority || 'low';
+                    actions.innerHTML = `
+                        <button class="modal-btn danger" onclick="deleteTask()">削除</button>
+                        <button class="modal-btn cancel" onclick="hideTaskModal()">キャンセル</button>
+                        <button class="modal-btn confirm" onclick="saveTask()">保存</button>
+                    `;
+                }
+            } else {
+                title.textContent = 'タスクを追加';
+                document.getElementById('taskNameInput').value = '';
+                const today = formatDate(new Date());
+                document.getElementById('taskStartInput').value = today;
+                document.getElementById('taskEndInput').value = today;
+                document.getElementById('taskPriorityInput').value = 'medium';
+                actions.innerHTML = `
+                    <button class="modal-btn cancel" onclick="hideTaskModal()">キャンセル</button>
+                    <button class="modal-btn confirm" onclick="saveTask()">追加</button>
+                `;
+            }
+
+            document.getElementById('taskModal').classList.add('show');
+        }
+
+        function hideTaskModal() {
+            document.getElementById('taskModal').classList.remove('show');
+            editingTaskId = null;
+            currentProjectId = null;
+        }
+
+        function saveTask() {
+            const name = document.getElementById('taskNameInput').value.trim();
+            if (!name || !currentProjectId) return;
+
+            const project = data.projects.find(p => p.id === currentProjectId);
+            if (!project) return;
+
+            const taskData = {
+                id: editingTaskId || generateId(),
+                name: name,
+                startDate: document.getElementById('taskStartInput').value,
+                endDate: document.getElementById('taskEndInput').value,
+                priority: document.getElementById('taskPriorityInput').value,
+                completed: editingTaskId ? (project.tasks.find(t => t.id === editingTaskId)?.completed || false) : false
+            };
+
+            if (editingTaskId) {
+                const index = project.tasks.findIndex(t => t.id === editingTaskId);
+                if (index !== -1) project.tasks[index] = taskData;
+            } else {
+                project.tasks.push(taskData);
+            }
+
+            saveData();
+            render();
+            hideTaskModal();
+        }
+
+        function deleteTask() {
+            if (!confirm('このタスクを削除しますか？')) return;
+            const project = data.projects.find(p => p.id === currentProjectId);
+            if (project) {
+                project.tasks = project.tasks.filter(t => t.id !== editingTaskId);
+                saveData();
+                render();
+            }
+            hideTaskModal();
+        }
+
+        function toggleTaskComplete(projectId, taskId) {
+            const project = data.projects.find(p => p.id === projectId);
+            if (project) {
+                const task = project.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.completed = !task.completed;
+                    saveData();
+                    render();
+                }
+            }
+        }
+
+        // Drag and Drop
+        function setupDragAndDrop() {
+            document.querySelectorAll('.project-section').forEach(el => {
+                el.addEventListener('dragstart', handleDragStart);
+                el.addEventListener('dragend', handleDragEnd);
+                el.addEventListener('dragover', handleDragOver);
+                el.addEventListener('dragleave', handleDragLeave);
+                el.addEventListener('drop', handleDrop);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedProject = this.dataset.projectId;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.project-section').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+            draggedProject = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (this.dataset.projectId !== draggedProject) {
+                this.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            
+            if (draggedProject && this.dataset.projectId !== draggedProject) {
+                const fromIndex = data.projects.findIndex(p => p.id === draggedProject);
+                const toIndex = data.projects.findIndex(p => p.id === this.dataset.projectId);
+                
+                if (fromIndex !== -1 && toIndex !== -1) {
+                    const [moved] = data.projects.splice(fromIndex, 1);
+                    data.projects.splice(toIndex, 0, moved);
+                    saveData();
+                    render();
+                }
+            }
+        }
+
+        function collapseAll() {
+            data.projects.forEach(p => p.collapsed = true);
+            saveData();
+            render();
+        }
+
+        function expandAll() {
+            data.projects.forEach(p => p.collapsed = false);
+            saveData();
+            render();
+        }
+
+        // Summary
+        function updateSummary() {
+            let totalTasks = 0;
+            let completedTasks = 0;
+            let overdue = 0;
+            let dueSoon = 0;
+
+            for (const p of data.projects) {
+                for (const t of p.tasks) {
+                    totalTasks++;
+                    if (t.completed) completedTasks++;
+                    else {
+                        const status = getTaskStatus(t);
+                        if (status === 'overdue') overdue++;
+                        if (status === 'due-soon') dueSoon++;
+                    }
+                }
+            }
+
+            document.getElementById('totalProjects').textContent = data.projects.length;
+            document.getElementById('totalTasks').textContent = totalTasks;
+            document.getElementById('overdueTasks').textContent = overdue;
+            document.getElementById('dueSoonTasks').textContent = dueSoon;
+            document.getElementById('completionRate').textContent = totalTasks > 0 
+                ? Math.round((completedTasks / totalTasks) * 100) + '%' 
+                : '0%';
+        }
+
+        // Render
+        function render() {
+            updateSummary();
+            renderTimeline();
+            renderProjects();
+            setupDragAndDrop();
+        }
+
+        function renderTimeline() {
+            const { min, max } = getDateRange();
+            const today = formatDate(new Date());
+            let html = '';
+            let d = new Date(min);
+
+            while (d <= max) {
+                const dateStr = formatDate(d);
+                const dow = d.getDay();
+                const isWeekend = dow === 0 || dow === 6;
+                const isToday = dateStr === today;
+
+                html += `
+                    <div class="timeline-day ${isWeekend ? 'weekend' : ''} ${isToday ? 'today' : ''}">
+                        <div class="timeline-weekday">${WEEKDAYS[dow]}</div>
+                        <div class="timeline-date">${d.getDate()}</div>
+                    </div>
+                `;
+                d.setDate(d.getDate() + 1);
+            }
+
+            document.getElementById('timelineDates').innerHTML = html;
+        }
+
+        function renderProjects() {
+            const container = document.getElementById('projectsContainer');
+            const { min, max } = getDateRange();
+            const baseDate = formatDate(min);
+            const today = formatDate(new Date());
+
+            if (data.projects.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📋</div>
+                        <p class="empty-text">プロジェクトを追加して始めましょう</p>
+                        <button class="header-btn primary" onclick="showProjectModal()">プロジェクトを追加</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const generateCells = () => {
+                let cells = '';
+                let d = new Date(min);
+                while (d <= max) {
+                    const dateStr = formatDate(d);
+                    const dow = d.getDay();
+                    const isWeekend = dow === 0 || dow === 6;
+                    const isToday = dateStr === today;
+                    cells += `<div class="gantt-cell ${isWeekend ? 'weekend' : ''} ${isToday ? 'today' : ''}"></div>`;
+                    d.setDate(d.getDate() + 1);
+                }
+                return cells;
+            };
+
+            const todayOffset = getDayOffset(today, baseDate);
+
+            container.innerHTML = data.projects.map(project => {
+                const completedCount = project.tasks.filter(t => t.completed).length;
+                const progress = project.tasks.length > 0 
+                    ? Math.round((completedCount / project.tasks.length) * 100) 
+                    : 0;
+
+                const tasksHtml = project.collapsed ? '' : project.tasks.map(task => {
+                    const status = getTaskStatus(task);
+                    const statusLabel = {
+                        'overdue': '期限超過',
+                        'due-soon': 'まもなく',
+                        'on-track': '',
+                        'completed': ''
+                    }[status];
+
+                    let barHtml = '';
+                    if (task.startDate && task.endDate) {
+                        const offset = getDayOffset(task.startDate, baseDate);
+                        const duration = getDaysDiff(task.startDate, task.endDate);
+                        barHtml = `
+                            <div class="gantt-bar color-${project.color} ${task.completed ? 'completed' : ''}"
+                                 style="left: ${offset * DAY_WIDTH}px; width: ${duration * DAY_WIDTH - 4}px;"
+                                 onclick="showTaskModal('${project.id}', '${task.id}')">
+                                ${task.name}
+                            </div>
+                        `;
+                    }
+
+                    const priorityBadge = task.priority === 'high' 
+                        ? '<span class="priority-badge priority-high">高</span>'
+                        : task.priority === 'medium' 
+                            ? '<span class="priority-badge priority-medium">中</span>'
+                            : '';
+
+                    return `
+                        <div class="task-row ${task.completed ? 'completed' : ''}">
+                            <div class="task-label">
+                                <div class="task-checkbox ${task.completed ? 'checked' : ''}" onclick="toggleTaskComplete('${project.id}', '${task.id}')">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="task-info" onclick="showTaskModal('${project.id}', '${task.id}')">
+                                    <div class="task-name">${escapeHtml(task.name)}${priorityBadge}</div>
+                                    <div class="task-dates">${task.startDate ? formatDisplayDate(task.startDate) : ''} - ${task.endDate ? formatDisplayDate(task.endDate) : ''}</div>
+                                </div>
+                                ${statusLabel ? `<span class="task-status ${status}">${statusLabel}</span>` : ''}
+                            </div>
+                            <div class="task-gantt">
+                                ${generateCells()}
+                                ${barHtml}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                const addTaskHtml = project.collapsed ? '' : `
+                    <div class="add-task-row">
+                        <div class="add-task-label">
+                            <button class="add-task-btn" onclick="showTaskModal('${project.id}')">+ タスクを追加</button>
+                        </div>
+                        <div class="add-task-gantt"></div>
+                    </div>
+                `;
+
+                return `
+                    <div class="project-section" data-project-id="${project.id}" draggable="true">
+                        <div class="project-header">
+                            <div class="project-label">
+                                <div class="drag-handle">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="9" cy="6" r="1.5"/>
+                                        <circle cx="15" cy="6" r="1.5"/>
+                                        <circle cx="9" cy="12" r="1.5"/>
+                                        <circle cx="15" cy="12" r="1.5"/>
+                                        <circle cx="9" cy="18" r="1.5"/>
+                                        <circle cx="15" cy="18" r="1.5"/>
+                                    </svg>
+                                </div>
+                                <div class="project-color color-${project.color}" onclick="toggleProject('${project.id}')" style="cursor:pointer;"></div>
+                                <input type="text" class="project-name-input" value="${escapeHtml(project.name)}" 
+                                       onchange="updateProjectName('${project.id}', this.value)">
+                                <span class="project-progress">${progress}%</span>
+                                <button class="project-menu-btn" onclick="showProjectModal('${project.id}')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="19" cy="12" r="1"/>
+                                        <circle cx="5" cy="12" r="1"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="project-gantt-header">
+                                <div class="today-line" style="left: ${todayOffset * DAY_WIDTH + DAY_WIDTH / 2}px;"></div>
+                            </div>
+                        </div>
+                        ${tasksHtml}
+                        ${addTaskHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Modal close on backdrop
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal-overlay')) {
+                    modal.classList.remove('show');
+                }
+            });
+        });
+
+        // Init
+        render();
+    </script>
+</body>
+</html>
